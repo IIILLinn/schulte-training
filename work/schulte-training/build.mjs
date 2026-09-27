@@ -11,4 +11,5 @@ const html = template
   .replace('/* __APP__ */', app);
 
 await writeFile(new URL('../../outputs/schulte-training.html', root), html);
-console.log('built outputs/schulte-training.html');
+await writeFile(new URL('../../index.html', root), html);
+console.log('built outputs/schulte-training.html and index.html');
