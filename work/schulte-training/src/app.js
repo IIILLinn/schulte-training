@@ -134,6 +134,26 @@
     elements.board.style.setProperty('--cell-divisor', String(1 / layout.cellRatio));
     elements.board.innerHTML = '';
 
+    if (layout.outline) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.classList.add('shape-outline');
+      svg.setAttribute('viewBox', '0 0 100 100');
+      svg.setAttribute('preserveAspectRatio', 'none');
+      svg.setAttribute('aria-hidden', 'true');
+      if (state.settings.shape === 'circle') {
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', '50');
+        circle.setAttribute('cy', '50');
+        circle.setAttribute('r', '45');
+        svg.append(circle);
+      } else {
+        const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        polygon.setAttribute('points', layout.outline.map((point) => `${point.x * 100},${point.y * 100}`).join(' '));
+        svg.append(polygon);
+      }
+      elements.board.append(svg);
+    }
+
     values.forEach((value, index) => {
       const cell = document.createElement('button');
       cell.type = 'button';
@@ -147,8 +167,13 @@
         const slot = layout.slots[index];
         cell.style.setProperty('--x', slot.x);
         cell.style.setProperty('--y', slot.y);
-        cell.style.setProperty('--scale', (0.86 + random() * 0.14).toFixed(3));
-        cell.style.setProperty('--radius', `${(44 + random() * 6).toFixed(1)}%`);
+        if (state.settings.shape === 'circle') {
+          cell.style.setProperty('--scale', '1');
+          cell.style.setProperty('--radius', '50%');
+        } else {
+          cell.style.setProperty('--scale', (0.82 + random() * 0.16).toFixed(3));
+          cell.style.setProperty('--radius', `${(26 + random() * 22).toFixed(1)}%`);
+        }
       }
 
       cell.addEventListener('click', () => handleCellClick(cell, value));

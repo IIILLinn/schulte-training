@@ -98,6 +98,7 @@ try {
   await evaluate('document.querySelector("#startBtn").click()');
   assert.equal(Number(await evaluate('document.querySelectorAll(".cell").length')), 15);
   assert.equal(await evaluate('document.querySelector("#board").dataset.shape'), 'circle');
+  assert.equal(await evaluate('document.querySelector(".shape-outline circle") !== null'), true);
 
   const circleLayoutFirst = await evaluate(layoutExpression);
   await evaluate('document.querySelector("#restartBtn").click()');
@@ -131,6 +132,8 @@ try {
   await evaluate('document.querySelector("#startBtn").click()');
   assert.equal(Number(await evaluate('document.querySelectorAll(".cell").length')), 50);
   assert.equal(await evaluate('document.querySelector("#board").dataset.shape'), 'irregular');
+  assert.equal(await evaluate('document.querySelector(".shape-outline polygon") !== null'), true);
+  assert.ok(Number(await evaluate('document.querySelector(".shape-outline polygon").getAttribute("points").split(" ").filter(Boolean).length')) >= 32);
   const irregularLayoutFirst = await evaluate(layoutExpression);
   await evaluate('document.querySelector("#restartBtn").click()');
   const irregularLayoutSecond = await evaluate(layoutExpression);

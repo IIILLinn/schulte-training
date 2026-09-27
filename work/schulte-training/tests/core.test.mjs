@@ -42,6 +42,18 @@ test('createCircularLayout supports every configured count without overlaps', ()
   }
 });
 
+test('circle and irregular layouts expose visibly different outlines', () => {
+  const circle = core.createCircularLayout(50, seeded(1));
+  const irregular = core.createIrregularLayout(50, seeded(2));
+  assert.ok(circle.outline.length >= 32);
+  assert.ok(irregular.outline.length >= 32);
+  const radii = (outline) => outline.map((point) => Math.hypot(point.x - 0.5, point.y - 0.5));
+  const circleRadii = radii(circle.outline);
+  const irregularRadii = radii(irregular.outline);
+  assert.ok(Math.max(...circleRadii) - Math.min(...circleRadii) < 0.02, 'circle outline must stay circular');
+  assert.ok(Math.max(...irregularRadii) - Math.min(...irregularRadii) > 0.04, 'irregular outline must be visibly uneven');
+});
+
 test('createIrregularLayout creates chaotic layouts that change by seed', () => {
   const first = core.createIrregularLayout(50, seeded(1));
   const second = core.createIrregularLayout(50, seeded(2));
