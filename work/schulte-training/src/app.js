@@ -1,16 +1,18 @@
 (function () {
   const core = globalThis.SchulteCore;
   const STORAGE_KEY = 'schulte-training-v1';
+  const SQUARE_SIZES = [3, 4, 5, 6, 7];
+  const COUNT_SIZES = [15, 20, 25, 30, 35, 40, 45, 50];
   const defaultSettings = {
-    size: 5,
-    order: 'asc',
-    arrangement: 'random',
     shape: 'square',
+    squareSize: 5,
+    count: 25,
   };
 
   const elements = {
     board: document.querySelector('#board'),
     settings: document.querySelector('#settings'),
+    sizeChoices: document.querySelector('#sizeChoices'),
     startBtn: document.querySelector('#startBtn'),
     restartBtn: document.querySelector('#restartBtn'),
     settingsBtn: document.querySelector('#settingsBtn'),
@@ -32,6 +34,8 @@
     settings: { ...defaultSettings },
     phase: 'idle',
     values: [],
+    layout: null,
+    total: 25,
     current: 1,
     completed: 0,
     errors: 0,
@@ -62,25 +66,10 @@
     }
   }
 
-  function totalValues() {
-    return state.settings.size * state.settings.size;
-  }
-
-  function firstTarget() {
-    return state.settings.order === 'asc' ? 1 : totalValues();
-  }
-
-  function nextTarget() {
-    return state.settings.order === 'asc' ? state.current + 1 : state.current - 1;
-  }
-
-  function createValues() {
-    return core.buildValues(
-      state.settings.size,
-      state.settings.order,
-      state.settings.arrangement,
-      Math.random,
-    );
+  function currentTotal() {
+    return state.settings.shape === 'square'
+      ? state.settings.squareSize * state.settings.squareSize
+      : state.settings.count;
   }
 
   function clearTimer() {
@@ -88,14 +77,36 @@
       window.clearInterval(state.timerId);
       state.timerId = null;
     }
-    const runningFor = state.phase === 'running' ? performance.now() - state.startedAt : state.elapsed;
-    if (runningFor > 0) state.elapsed = runningFor;
+    if (state.phase === 'running') state.elapsed = performance.now() - state.startedAt;
+  }
+
+  function renderSizeChoices() {
+    const isSquare = state.settings.shape === 'square';
+    const options = isSquare
+      ? SQUARE_SIZES.map((size) => ({ value: size, label: `${size}×${size}` }))
+      : COUNT_SIZES.map((count) => ({ value: count, label: String(count) }));
+    const selectedValue = isSquare ? state.settings.squareSize : state.settings.count;
+    elements.sizeChoices.innerHTML = '';
+    options.forEach((option) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'choice';
+      button.dataset.setting = 'size';
+      button.dataset.value = String(option.value);
+      button.textContent = option.label;
+      button.setAttribute('aria-pressed', String(option.value === selectedValue));
+      if (option.value === selectedValue) button.classList.add('is-active');
+      elements.sizeChoices.append(button);
+    });
   }
 
   function renderSettings() {
+    renderSizeChoices();
     const locked = state.phase === 'running';
     document.querySelectorAll('[data-setting]').forEach((button) => {
-      const selected = String(state.settings[button.dataset.setting]) === button.dataset.value;
+      const selected = button.dataset.setting === 'shape'
+        ? button.dataset.value === state.settings.shape
+        : Number(button.dataset.value) === (state.settings.shape === 'square' ? state.settings.squareSize : state.settings.count);
       button.classList.toggle('is-active', selected);
       button.setAttribute('aria-pressed', String(selected));
       button.disabled = locked;
@@ -105,15 +116,24 @@
     });
   }
 
-  function renderBoard(values = createValues()) {
+  function createLayout(random) {
+    if (state.settings.shape === 'square') return core.createSquareLayout(state.settings.squareSize);
+    if (state.settings.shape === 'circle') return core.createCircularLayout(state.settings.count, random);
+    return core.createIrregularLayout(state.settings.count, random);
+  }
+
+  function renderBoard(random = Math.random) {
+    const layout = createLayout(random);
+    const values = core.assignValuesToSlots(layout.slots, random);
+    state.layout = layout;
     state.values = values;
-    const size = state.settings.size;
-    const shape = state.settings.shape;
-    elements.board.dataset.shape = shape;
-    elements.board.style.setProperty('--size', size);
+    state.total = values.length;
+
+    elements.board.dataset.shape = state.settings.shape;
+    elements.board.style.setProperty('--size', state.settings.shape === 'square' ? state.settings.squareSize : 0);
+    elements.board.style.setProperty('--cell-divisor', String(1 / layout.cellRatio));
     elements.board.innerHTML = '';
 
-    const slots = shape === 'circle' ? core.createCircularSlots(size) : null;
     values.forEach((value, index) => {
       const cell = document.createElement('button');
       cell.type = 'button';
@@ -122,24 +142,34 @@
       cell.setAttribute('role', 'gridcell');
       cell.setAttribute('aria-label', `数字 ${value}`);
       cell.textContent = value;
-      if (slots) {
-        cell.style.setProperty('--x', slots[index].x);
-        cell.style.setProperty('--y', slots[index].y);
+
+      if (state.settings.shape !== 'square') {
+        const slot = layout.slots[index];
+        cell.style.setProperty('--x', slot.x);
+        cell.style.setProperty('--y', slot.y);
+        cell.style.setProperty('--scale', (0.86 + random() * 0.14).toFixed(3));
+        cell.style.setProperty('--radius', `${(44 + random() * 6).toFixed(1)}%`);
       }
+
       cell.addEventListener('click', () => handleCellClick(cell, value));
       elements.board.append(cell);
     });
   }
 
-  function resetToIdle() {
+  function setPreviewState() {
     clearTimer();
     state.phase = 'idle';
     state.elapsed = 0;
     state.completed = 0;
     state.errors = 0;
-    state.current = firstTarget();
+    state.current = 1;
+    state.total = currentTotal();
     elements.resultPanel.hidden = true;
     elements.statusMessage.textContent = '准备好后点击“开始训练”。';
+  }
+
+  function resetToIdle() {
+    setPreviewState();
     renderBoard();
     renderSettings();
     updateDisplay();
@@ -152,11 +182,12 @@
     state.elapsed = 0;
     state.completed = 0;
     state.errors = 0;
-    state.current = firstTarget();
-    state.startedAt = performance.now();
-    elements.resultPanel.hidden = true;
-    elements.statusMessage.textContent = state.settings.order === 'asc' ? '从 1 开始，依次点击到终点。' : `从 ${totalValues()} 开始倒序点击。`;
+    state.current = 1;
     renderBoard();
+    state.startedAt = performance.now();
+    state.total = state.values.length;
+    elements.resultPanel.hidden = true;
+    elements.statusMessage.textContent = `从 1 开始，依次点击到 ${state.total}。`;
     renderSettings();
     updateDisplay();
     state.timerId = window.setInterval(updateTimer, 100);
@@ -169,10 +200,9 @@
   }
 
   function updateDisplay() {
-    const total = totalValues();
-    const targetValue = state.phase === 'complete' ? '完成' : state.current;
+    const total = state.total || currentTotal();
     elements.timer.textContent = core.formatTime(state.elapsed);
-    elements.target.textContent = targetValue;
+    elements.target.textContent = state.phase === 'complete' ? '完成' : state.current;
     elements.errors.textContent = state.errors;
     elements.progressText.textContent = `${state.completed} / ${total}`;
     elements.progressBar.style.width = `${(state.completed / total) * 100}%`;
@@ -186,21 +216,24 @@
     if (value !== state.current) {
       state.errors += 1;
       cell.classList.add('wrong');
-      window.setTimeout(() => cell.classList.remove('wrong'), 320);
+      window.setTimeout(() => cell.classList.remove('wrong'), 330);
       elements.statusMessage.textContent = `先找 ${state.current}，不要急着跳数字。`;
       updateDisplay();
       return;
     }
 
-    cell.classList.add('done');
     cell.disabled = true;
+    cell.classList.add('correct');
+    window.setTimeout(() => cell.classList.remove('correct'), 380);
     state.completed += 1;
-    if (state.completed >= totalValues()) {
+
+    if (state.completed >= state.total) {
       state.current = null;
       finishGame();
       return;
     }
-    state.current = nextTarget();
+
+    state.current += 1;
     elements.statusMessage.textContent = `很好，继续找 ${state.current}。`;
     updateDisplay();
   }
@@ -212,7 +245,6 @@
       state.timerId = null;
     }
     state.phase = 'complete';
-    state.current = null;
     saveResult();
     updateDisplay();
     renderSettings();
@@ -225,16 +257,10 @@
     const settings = { ...state.settings };
     const key = core.specKey(settings);
     const previousBest = stats.best[key];
-    if (previousBest === undefined || state.elapsed < previousBest) {
-      stats.best[key] = state.elapsed;
-    }
+    if (previousBest === undefined || state.elapsed < previousBest) stats.best[key] = state.elapsed;
     stats.records.unshift({
       key,
       settings,
-      size: settings.size,
-      order: settings.order,
-      arrangement: settings.arrangement,
-      shape: settings.shape,
       ms: state.elapsed,
       errors: state.errors,
       completedAt: Date.now(),
@@ -243,20 +269,15 @@
     persistStats();
   }
 
-  function orderLabel(order) {
-    return order === 'asc' ? '正序' : '倒序';
-  }
-
-  function arrangementLabel(arrangement) {
-    return arrangement === 'random' ? '随机' : '顺序';
-  }
-
   function shapeLabel(shape) {
-    return shape === 'circle' ? '圆形' : '方形';
+    if (shape === 'circle') return '圆形';
+    if (shape === 'irregular') return '不规则';
+    return '方形';
   }
 
   function specLabel(settings) {
-    return `${settings.size}×${settings.size} ${shapeLabel(settings.shape)} · ${orderLabel(settings.order)} · ${arrangementLabel(settings.arrangement)}`;
+    if (settings.shape === 'square') return `${settings.squareSize}×${settings.squareSize} 方形`;
+    return `${settings.count} 个数字 · ${shapeLabel(settings.shape)}`;
   }
 
   function renderStats() {
@@ -293,16 +314,15 @@
 
   function setSetting(key, value) {
     if (state.phase === 'running') return;
-    if (state.phase === 'complete') {
-      state.phase = 'idle';
-      elements.resultPanel.hidden = true;
+    if (key === 'shape') {
+      state.settings.shape = value;
+      if (value === 'square' && !SQUARE_SIZES.includes(state.settings.squareSize)) state.settings.squareSize = 5;
+      if (value !== 'square' && !COUNT_SIZES.includes(state.settings.count)) state.settings.count = 25;
+    } else if (key === 'size') {
+      if (state.settings.shape === 'square') state.settings.squareSize = Number(value);
+      else state.settings.count = Number(value);
     }
-    state.settings[key] = key === 'size' ? Number(value) : value;
-    state.phase = 'idle';
-    state.elapsed = 0;
-    state.completed = 0;
-    state.errors = 0;
-    state.current = firstTarget();
+    setPreviewState();
     renderSettings();
     renderBoard();
     updateDisplay();
@@ -312,29 +332,26 @@
   function applyPreset(preset) {
     if (state.phase === 'running') return;
     const presets = {
-      beginner: { size: 3, order: 'asc', arrangement: 'random', shape: 'square' },
-      standard: { size: 5, order: 'asc', arrangement: 'random', shape: 'square' },
-      advanced: { size: 6, order: 'asc', arrangement: 'random', shape: 'circle' },
+      beginner: { shape: 'square', squareSize: 3, count: 25 },
+      standard: { shape: 'square', squareSize: 5, count: 25 },
+      chaos: { shape: 'irregular', squareSize: 5, count: 50 },
     };
     state.settings = { ...presets[preset] };
-    state.phase = 'idle';
-    state.elapsed = 0;
-    state.completed = 0;
-    state.errors = 0;
-    state.current = firstTarget();
-    elements.resultPanel.hidden = true;
+    setPreviewState();
     renderSettings();
     renderBoard();
     updateDisplay();
     renderStats();
   }
 
-  document.querySelectorAll('[data-setting]').forEach((button) => {
-    button.addEventListener('click', () => setSetting(button.dataset.setting, button.dataset.value));
-  });
-
-  document.querySelectorAll('[data-preset]').forEach((button) => {
-    button.addEventListener('click', () => applyPreset(button.dataset.preset));
+  elements.settings.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-setting], [data-preset]');
+    if (!button) return;
+    if (button.dataset.preset) {
+      applyPreset(button.dataset.preset);
+      return;
+    }
+    setSetting(button.dataset.setting, button.dataset.value);
   });
 
   elements.startBtn.addEventListener('click', startGame);
@@ -347,10 +364,9 @@
     elements.statusMessage.textContent = '训练记录已清除。';
   });
 
-  state.values = createValues();
-  state.current = firstTarget();
+  state.total = currentTotal();
   renderSettings();
-  renderBoard(state.values);
+  renderBoard();
   updateDisplay();
   renderStats();
 })();

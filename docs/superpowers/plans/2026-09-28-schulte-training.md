@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
+> 说明：本文件保留为初版实现计划。2026-09-28 的 v2 需求（7×7、圆形/不规则任意数量、最大化随机布局、顺序相邻数字拉开、短暂正确反馈）已按更新后的设计规格实现。
+
 **Goal:** 构建一个单文件浏览器舒尔特训练器，支持 3×3 至 6×6、正序/倒序、随机/顺序、方形/圆形棋盘，以及成绩记录。
 
 **Architecture:** 纯逻辑放在可被 Node 单元测试导入的 `core.js` 中；浏览器界面由 `index.html`、`styles.css`、`app.js` 组成；`build.mjs` 将三份资源内联为最终单文件 `outputs/schulte-training.html`。这样既能遵循 TDD，也能交付无需构建即可打开的单文件。

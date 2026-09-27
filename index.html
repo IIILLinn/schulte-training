@@ -174,11 +174,11 @@ h1 {
 }
 
 .choice-row {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
 }
 
-.choice-row--four {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.choice-row--size {
+  grid-template-columns: repeat(auto-fit, minmax(46px, 1fr));
 }
 
 .choice,
@@ -356,18 +356,21 @@ h1 {
   aspect-ratio: 1;
 }
 
-.board[data-shape="circle"] {
+.board[data-shape="circle"],
+.board[data-shape="irregular"] {
   position: relative;
 }
 
-.board[data-shape="circle"] .cell {
+.board[data-shape="circle"] .cell,
+.board[data-shape="irregular"] .cell {
   position: absolute;
   left: calc(var(--x) * 100%);
   top: calc(var(--y) * 100%);
-  width: clamp(24px, calc(100% / (var(--size) + 8)), 54px);
+  width: min(64px, calc(100% / var(--cell-divisor)));
   aspect-ratio: 1;
+  border-radius: var(--radius, 50%);
   font-size: clamp(0.72rem, 1.8vw, 1rem);
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) scale(var(--scale, 1));
 }
 
 .cell {
@@ -388,14 +391,15 @@ h1 {
   transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
 
-.cell:hover:not(:disabled):not(.done) {
+.cell:hover:not(:disabled):not(.correct) {
   border-color: #b5aa9a;
   box-shadow: 0 9px 18px rgba(32, 37, 34, 0.09);
   transform: translateY(-2px);
 }
 
-.board[data-shape="circle"] .cell:hover:not(:disabled):not(.done) {
-  transform: translate(-50%, -50%) translateY(-2px);
+.board[data-shape="circle"] .cell:hover:not(:disabled):not(.correct),
+.board[data-shape="irregular"] .cell:hover:not(:disabled):not(.correct) {
+  transform: translate(-50%, -50%) scale(var(--scale, 1)) translateY(-2px);
 }
 
 .cell:disabled {
@@ -403,10 +407,11 @@ h1 {
   opacity: 1;
 }
 
-.cell.done {
+.cell.correct {
   color: var(--success-ink);
-  background: var(--success);
-  border-color: #bfd8c2;
+  background: #e2f1e4;
+  border-color: #9ecaa5;
+  animation: correctPulse 380ms ease-out both;
 }
 
 .cell.wrong {
@@ -421,6 +426,12 @@ h1 {
   100% { translate: 0 0; }
   30% { translate: -4px 0; }
   60% { translate: 4px 0; }
+}
+
+@keyframes correctPulse {
+  0% { box-shadow: 0 0 0 0 rgba(100, 173, 112, 0); }
+  42% { box-shadow: 0 0 0 8px rgba(100, 173, 112, 0.22); }
+  100% { box-shadow: 0 0 0 0 rgba(100, 173, 112, 0); }
 }
 
 .controls {
@@ -569,7 +580,7 @@ h1 {
       <header class="hero">
         <p class="eyebrow">专注力训练</p>
         <h1>舒尔特方格</h1>
-        <p class="hero-copy">选择训练规格，按顺序找到全部数字。保持视线稳定，不必加快呼吸。</p>
+        <p class="hero-copy">选择棋盘形状和数字数量，按 1 到终点的顺序完成训练。保持视线稳定，不必加快呼吸。</p>
       </header>
 
       <main class="layout">
@@ -587,44 +598,18 @@ h1 {
               <span>棋盘尺寸</span>
               <small>数字总量自动调整</small>
             </div>
-            <div class="choice-row choice-row--four" role="group" aria-label="棋盘尺寸">
-              <button class="choice" type="button" data-setting="size" data-value="3" aria-pressed="false">3×3</button>
-              <button class="choice" type="button" data-setting="size" data-value="4" aria-pressed="false">4×4</button>
-              <button class="choice" type="button" data-setting="size" data-value="5" aria-pressed="true">5×5</button>
-              <button class="choice" type="button" data-setting="size" data-value="6" aria-pressed="false">6×6</button>
-            </div>
-          </div>
-
-          <div class="field">
-            <div class="field-label">
-              <span>点击顺序</span>
-              <small>从起点向终点推进</small>
-            </div>
-            <div class="choice-row" role="group" aria-label="点击顺序">
-              <button class="choice" type="button" data-setting="order" data-value="asc" aria-pressed="true">正序 1→N²</button>
-              <button class="choice" type="button" data-setting="order" data-value="desc" aria-pressed="false">倒序 N²→1</button>
-            </div>
-          </div>
-
-          <div class="field">
-            <div class="field-label">
-              <span>排列方式</span>
-              <small>标准训练建议随机</small>
-            </div>
-            <div class="choice-row" role="group" aria-label="排列方式">
-              <button class="choice" type="button" data-setting="arrangement" data-value="random" aria-pressed="true">随机排列</button>
-              <button class="choice" type="button" data-setting="arrangement" data-value="sequential" aria-pressed="false">顺序排列</button>
-            </div>
+            <div class="choice-row choice-row--size" id="sizeChoices" role="group" aria-label="棋盘尺寸"></div>
           </div>
 
           <div class="field">
             <div class="field-label">
               <span>棋盘形状</span>
-              <small>圆形为同心环排布</small>
+              <small>圆形也随机散布</small>
             </div>
             <div class="choice-row" role="group" aria-label="棋盘形状">
               <button class="choice" type="button" data-setting="shape" data-value="square" aria-pressed="true">方形</button>
               <button class="choice" type="button" data-setting="shape" data-value="circle" aria-pressed="false">圆形</button>
+              <button class="choice" type="button" data-setting="shape" data-value="irregular" aria-pressed="false">不规则</button>
             </div>
           </div>
 
@@ -636,7 +621,7 @@ h1 {
             <div class="preset-row">
               <button class="preset" type="button" data-preset="beginner">初级 3×3</button>
               <button class="preset" type="button" data-preset="standard">标准 5×5</button>
-              <button class="preset" type="button" data-preset="advanced">进阶 6×6</button>
+              <button class="preset" type="button" data-preset="chaos">混乱 50</button>
             </div>
           </div>
 
@@ -724,61 +709,193 @@ h1 {
     return copy;
   }
 
-  function buildValues(size, order = 'asc', arrangement = 'random', random = Math.random) {
-    const total = size * size;
-    const values = Array.from({ length: total }, (_, index) => index + 1);
-    const ordered = order === 'desc' ? values.reverse() : values;
-    return arrangement === 'random' ? shuffle(ordered, random) : ordered;
+  function buildValues(count, random = Math.random) {
+    return shuffle(Array.from({ length: count }, (_, index) => index + 1), random);
   }
 
-  function ringCounts(size) {
-    if (size % 2 === 1) {
-      const rings = Math.floor(size / 2);
-      return [1, ...Array.from({ length: rings }, (_, index) => 8 * (index + 1))];
+  function clamp(value, minimum, maximum) {
+    return Math.min(maximum, Math.max(minimum, value));
+  }
+
+  function distance(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  function pairwiseMinDistance(points) {
+    let minimum = Infinity;
+    for (let i = 0; i < points.length; i += 1) {
+      for (let j = i + 1; j < points.length; j += 1) {
+        minimum = Math.min(minimum, distance(points[i], points[j]));
+      }
     }
-    const rings = size / 2 - 1;
-    return [4, ...Array.from({ length: rings }, (_, index) => 12 + index * 8)];
+    return Number.isFinite(minimum) ? minimum : 1;
   }
 
-  function clampPosition(value) {
-    return Math.min(0.92, Math.max(0.08, value));
+  function selectCandidates(candidates, count, random) {
+    const shuffled = shuffle(candidates, random);
+    if (shuffled.length <= count) return shuffled;
+
+    const radiusLimit = 0.75;
+    const boundary = shuffled.filter((candidate) => candidate.radius >= radiusLimit);
+    const boundaryTarget = Math.min(boundary.length, Math.max(4, Math.round(count * 0.24)));
+    const selected = boundary.slice(0, boundaryTarget);
+    const selectedSet = new Set(selected);
+
+    for (const candidate of shuffled) {
+      if (selected.length >= count) break;
+      if (!selectedSet.has(candidate)) {
+        selected.push(candidate);
+        selectedSet.add(candidate);
+      }
+    }
+    return selected;
   }
 
-  function createCircularSlots(size) {
-    const counts = ringCounts(size);
-    const slots = [];
-    const centerOffset = 0.085;
+  function createCircularLayout(count, random = Math.random) {
+    let gridSize = Math.max(5, Math.ceil(Math.sqrt(count / 0.58)));
+    let candidates = [];
+    let spacing = 1 / gridSize;
 
-    if (counts[0] === 1) {
-      slots.push({ x: 0.5, y: 0.5 });
-    } else {
-      slots.push(
-        { x: 0.5 - centerOffset, y: 0.5 - centerOffset },
-        { x: 0.5 + centerOffset, y: 0.5 - centerOffset },
-        { x: 0.5 - centerOffset, y: 0.5 + centerOffset },
-        { x: 0.5 + centerOffset, y: 0.5 + centerOffset },
-      );
+    while (gridSize <= 20) {
+      candidates = [];
+      spacing = 1 / gridSize;
+      const boundaryRadius = 0.455;
+      for (let row = 0; row < gridSize; row += 1) {
+        for (let column = 0; column < gridSize; column += 1) {
+          const x = (column + 0.5) * spacing;
+          const y = (row + 0.5) * spacing;
+          const radius = Math.hypot(x - 0.5, y - 0.5);
+          if (radius <= boundaryRadius - spacing * 0.25) candidates.push({ x, y, radius });
+        }
+      }
+      if (candidates.length >= count + Math.max(4, Math.round(count * 0.12))) break;
+      gridSize += 1;
     }
 
-    const ringTotal = counts.length - 1;
-    for (let ring = 1; ring <= ringTotal; ring += 1) {
-      const radius = ringTotal === 1 ? 0.42 : 0.21 + (ring - 1) * 0.21;
-      const count = counts[ring];
-      const angleOffset = ring % 2 === 0 ? Math.PI / count : 0;
-      for (let index = 0; index < count; index += 1) {
-        const angle = -Math.PI / 2 + angleOffset + (index * Math.PI * 2) / count;
-        slots.push({
-          x: clampPosition(0.5 + Math.cos(angle) * radius),
-          y: clampPosition(0.5 + Math.sin(angle) * radius),
+    const selected = selectCandidates(candidates, count, random);
+    const jitter = spacing * 0.08;
+    const slots = selected.map((candidate) => ({
+      x: clamp(candidate.x + (random() - 0.5) * jitter * 2, 0.04, 0.96),
+      y: clamp(candidate.y + (random() - 0.5) * jitter * 2, 0.04, 0.96),
+    }));
+    const actualMin = pairwiseMinDistance(slots);
+    return {
+      slots: shuffle(slots, random),
+      cellRatio: Math.min(0.14, actualMin * 0.78),
+    };
+  }
+
+  function createIrregularLayout(count, random = Math.random) {
+    const columns = Math.max(5, Math.ceil(Math.sqrt(count * 1.25)));
+    const rows = Math.max(4, Math.ceil((count + Math.max(3, Math.round(count * 0.22))) / columns));
+    const spacingX = 1 / columns;
+    const spacingY = 1 / rows;
+    const minSpacing = Math.min(spacingX, spacingY);
+    const candidates = [];
+
+    for (let row = 0; row < rows; row += 1) {
+      for (let column = 0; column < columns; column += 1) {
+        candidates.push({
+          x: (column + 0.5) * spacingX,
+          y: (row + 0.5) * spacingY,
         });
       }
     }
 
-    return slots;
+    const selected = shuffle(candidates, random).slice(0, count);
+    const slots = selected.map((candidate) => {
+      const jitterX = spacingX * 0.08 * (random() * 2 - 1);
+      const jitterY = spacingY * 0.08 * (random() * 2 - 1);
+      return {
+        x: clamp(candidate.x + jitterX, 0.03, 0.97),
+        y: clamp(candidate.y + jitterY, 0.03, 0.97),
+      };
+    });
+
+    return {
+      slots: shuffle(slots, random),
+      cellRatio: Math.min(0.12, minSpacing * 0.72),
+    };
+  }
+
+  function objective(values, slots) {
+    let minimum = Infinity;
+    let total = 0;
+    const slotByValue = new Map();
+    slots.forEach((slot, index) => slotByValue.set(values[index], slot));
+    for (let value = 1; value < values.length; value += 1) {
+      const current = distance(slotByValue.get(value), slotByValue.get(value + 1));
+      minimum = Math.min(minimum, current);
+      total += current;
+    }
+    return minimum + total * 0.0001;
+  }
+
+  function assignValuesToSlots(slots, random = Math.random) {
+    const count = slots.length;
+    if (count === 0) return [];
+
+    const unvisited = slots.map((_, index) => index);
+    const path = [];
+    let currentIndex = unvisited.splice(Math.floor(random() * unvisited.length), 1)[0];
+    path.push(currentIndex);
+
+    while (unvisited.length > 0) {
+      let bestDistance = -Infinity;
+      let bestCandidates = [];
+      for (const index of unvisited) {
+        const currentDistance = distance(slots[currentIndex], slots[index]);
+        if (currentDistance > bestDistance + 1e-9) {
+          bestDistance = currentDistance;
+          bestCandidates = [index];
+        } else if (Math.abs(currentDistance - bestDistance) <= 1e-9) {
+          bestCandidates.push(index);
+        }
+      }
+      currentIndex = bestCandidates[Math.floor(random() * bestCandidates.length)];
+      unvisited.splice(unvisited.indexOf(currentIndex), 1);
+      path.push(currentIndex);
+    }
+
+    const values = new Array(count);
+    path.forEach((slotIndex, valueIndex) => {
+      values[slotIndex] = valueIndex + 1;
+    });
+
+    let bestScore = objective(values, slots);
+    const iterations = count * 260;
+    for (let iteration = 0; iteration < iterations; iteration += 1) {
+      const first = Math.floor(random() * count);
+      const second = Math.floor(random() * count);
+      if (first === second) continue;
+      [values[first], values[second]] = [values[second], values[first]];
+      const nextScore = objective(values, slots);
+      if (nextScore >= bestScore) {
+        bestScore = nextScore;
+      } else {
+        [values[first], values[second]] = [values[second], values[first]];
+      }
+    }
+
+    return values;
+  }
+
+  function createSquareLayout(size) {
+    const slots = [];
+    for (let row = 0; row < size; row += 1) {
+      for (let column = 0; column < size; column += 1) {
+        slots.push({
+          x: (column + 0.5) / size,
+          y: (row + 0.5) / size,
+        });
+      }
+    }
+    return { slots, cellRatio: 1 / size };
   }
 
   function specKey(settings) {
-    return [settings.size, settings.order, settings.arrangement, settings.shape].join('-');
+    if (settings.shape === 'square') return `square-${settings.squareSize}x${settings.squareSize}`;
+    return `${settings.shape}-${settings.count}`;
   }
 
   function formatTime(ms) {
@@ -789,7 +906,16 @@ h1 {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${tenths}`;
   }
 
-  const api = { buildValues, createCircularSlots, formatTime, shuffle, specKey };
+  const api = {
+    assignValuesToSlots,
+    buildValues,
+    createCircularLayout,
+    createIrregularLayout,
+    createSquareLayout,
+    formatTime,
+    shuffle,
+    specKey,
+  };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   global.SchulteCore = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
@@ -797,16 +923,18 @@ h1 {
 (function () {
   const core = globalThis.SchulteCore;
   const STORAGE_KEY = 'schulte-training-v1';
+  const SQUARE_SIZES = [3, 4, 5, 6, 7];
+  const COUNT_SIZES = [15, 20, 25, 30, 35, 40, 45, 50];
   const defaultSettings = {
-    size: 5,
-    order: 'asc',
-    arrangement: 'random',
     shape: 'square',
+    squareSize: 5,
+    count: 25,
   };
 
   const elements = {
     board: document.querySelector('#board'),
     settings: document.querySelector('#settings'),
+    sizeChoices: document.querySelector('#sizeChoices'),
     startBtn: document.querySelector('#startBtn'),
     restartBtn: document.querySelector('#restartBtn'),
     settingsBtn: document.querySelector('#settingsBtn'),
@@ -828,6 +956,8 @@ h1 {
     settings: { ...defaultSettings },
     phase: 'idle',
     values: [],
+    layout: null,
+    total: 25,
     current: 1,
     completed: 0,
     errors: 0,
@@ -858,25 +988,10 @@ h1 {
     }
   }
 
-  function totalValues() {
-    return state.settings.size * state.settings.size;
-  }
-
-  function firstTarget() {
-    return state.settings.order === 'asc' ? 1 : totalValues();
-  }
-
-  function nextTarget() {
-    return state.settings.order === 'asc' ? state.current + 1 : state.current - 1;
-  }
-
-  function createValues() {
-    return core.buildValues(
-      state.settings.size,
-      state.settings.order,
-      state.settings.arrangement,
-      Math.random,
-    );
+  function currentTotal() {
+    return state.settings.shape === 'square'
+      ? state.settings.squareSize * state.settings.squareSize
+      : state.settings.count;
   }
 
   function clearTimer() {
@@ -884,14 +999,36 @@ h1 {
       window.clearInterval(state.timerId);
       state.timerId = null;
     }
-    const runningFor = state.phase === 'running' ? performance.now() - state.startedAt : state.elapsed;
-    if (runningFor > 0) state.elapsed = runningFor;
+    if (state.phase === 'running') state.elapsed = performance.now() - state.startedAt;
+  }
+
+  function renderSizeChoices() {
+    const isSquare = state.settings.shape === 'square';
+    const options = isSquare
+      ? SQUARE_SIZES.map((size) => ({ value: size, label: `${size}×${size}` }))
+      : COUNT_SIZES.map((count) => ({ value: count, label: String(count) }));
+    const selectedValue = isSquare ? state.settings.squareSize : state.settings.count;
+    elements.sizeChoices.innerHTML = '';
+    options.forEach((option) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'choice';
+      button.dataset.setting = 'size';
+      button.dataset.value = String(option.value);
+      button.textContent = option.label;
+      button.setAttribute('aria-pressed', String(option.value === selectedValue));
+      if (option.value === selectedValue) button.classList.add('is-active');
+      elements.sizeChoices.append(button);
+    });
   }
 
   function renderSettings() {
+    renderSizeChoices();
     const locked = state.phase === 'running';
     document.querySelectorAll('[data-setting]').forEach((button) => {
-      const selected = String(state.settings[button.dataset.setting]) === button.dataset.value;
+      const selected = button.dataset.setting === 'shape'
+        ? button.dataset.value === state.settings.shape
+        : Number(button.dataset.value) === (state.settings.shape === 'square' ? state.settings.squareSize : state.settings.count);
       button.classList.toggle('is-active', selected);
       button.setAttribute('aria-pressed', String(selected));
       button.disabled = locked;
@@ -901,15 +1038,24 @@ h1 {
     });
   }
 
-  function renderBoard(values = createValues()) {
+  function createLayout(random) {
+    if (state.settings.shape === 'square') return core.createSquareLayout(state.settings.squareSize);
+    if (state.settings.shape === 'circle') return core.createCircularLayout(state.settings.count, random);
+    return core.createIrregularLayout(state.settings.count, random);
+  }
+
+  function renderBoard(random = Math.random) {
+    const layout = createLayout(random);
+    const values = core.assignValuesToSlots(layout.slots, random);
+    state.layout = layout;
     state.values = values;
-    const size = state.settings.size;
-    const shape = state.settings.shape;
-    elements.board.dataset.shape = shape;
-    elements.board.style.setProperty('--size', size);
+    state.total = values.length;
+
+    elements.board.dataset.shape = state.settings.shape;
+    elements.board.style.setProperty('--size', state.settings.shape === 'square' ? state.settings.squareSize : 0);
+    elements.board.style.setProperty('--cell-divisor', String(1 / layout.cellRatio));
     elements.board.innerHTML = '';
 
-    const slots = shape === 'circle' ? core.createCircularSlots(size) : null;
     values.forEach((value, index) => {
       const cell = document.createElement('button');
       cell.type = 'button';
@@ -918,24 +1064,34 @@ h1 {
       cell.setAttribute('role', 'gridcell');
       cell.setAttribute('aria-label', `数字 ${value}`);
       cell.textContent = value;
-      if (slots) {
-        cell.style.setProperty('--x', slots[index].x);
-        cell.style.setProperty('--y', slots[index].y);
+
+      if (state.settings.shape !== 'square') {
+        const slot = layout.slots[index];
+        cell.style.setProperty('--x', slot.x);
+        cell.style.setProperty('--y', slot.y);
+        cell.style.setProperty('--scale', (0.86 + random() * 0.14).toFixed(3));
+        cell.style.setProperty('--radius', `${(44 + random() * 6).toFixed(1)}%`);
       }
+
       cell.addEventListener('click', () => handleCellClick(cell, value));
       elements.board.append(cell);
     });
   }
 
-  function resetToIdle() {
+  function setPreviewState() {
     clearTimer();
     state.phase = 'idle';
     state.elapsed = 0;
     state.completed = 0;
     state.errors = 0;
-    state.current = firstTarget();
+    state.current = 1;
+    state.total = currentTotal();
     elements.resultPanel.hidden = true;
     elements.statusMessage.textContent = '准备好后点击“开始训练”。';
+  }
+
+  function resetToIdle() {
+    setPreviewState();
     renderBoard();
     renderSettings();
     updateDisplay();
@@ -948,11 +1104,12 @@ h1 {
     state.elapsed = 0;
     state.completed = 0;
     state.errors = 0;
-    state.current = firstTarget();
-    state.startedAt = performance.now();
-    elements.resultPanel.hidden = true;
-    elements.statusMessage.textContent = state.settings.order === 'asc' ? '从 1 开始，依次点击到终点。' : `从 ${totalValues()} 开始倒序点击。`;
+    state.current = 1;
     renderBoard();
+    state.startedAt = performance.now();
+    state.total = state.values.length;
+    elements.resultPanel.hidden = true;
+    elements.statusMessage.textContent = `从 1 开始，依次点击到 ${state.total}。`;
     renderSettings();
     updateDisplay();
     state.timerId = window.setInterval(updateTimer, 100);
@@ -965,10 +1122,9 @@ h1 {
   }
 
   function updateDisplay() {
-    const total = totalValues();
-    const targetValue = state.phase === 'complete' ? '完成' : state.current;
+    const total = state.total || currentTotal();
     elements.timer.textContent = core.formatTime(state.elapsed);
-    elements.target.textContent = targetValue;
+    elements.target.textContent = state.phase === 'complete' ? '完成' : state.current;
     elements.errors.textContent = state.errors;
     elements.progressText.textContent = `${state.completed} / ${total}`;
     elements.progressBar.style.width = `${(state.completed / total) * 100}%`;
@@ -982,21 +1138,24 @@ h1 {
     if (value !== state.current) {
       state.errors += 1;
       cell.classList.add('wrong');
-      window.setTimeout(() => cell.classList.remove('wrong'), 320);
+      window.setTimeout(() => cell.classList.remove('wrong'), 330);
       elements.statusMessage.textContent = `先找 ${state.current}，不要急着跳数字。`;
       updateDisplay();
       return;
     }
 
-    cell.classList.add('done');
     cell.disabled = true;
+    cell.classList.add('correct');
+    window.setTimeout(() => cell.classList.remove('correct'), 380);
     state.completed += 1;
-    if (state.completed >= totalValues()) {
+
+    if (state.completed >= state.total) {
       state.current = null;
       finishGame();
       return;
     }
-    state.current = nextTarget();
+
+    state.current += 1;
     elements.statusMessage.textContent = `很好，继续找 ${state.current}。`;
     updateDisplay();
   }
@@ -1008,7 +1167,6 @@ h1 {
       state.timerId = null;
     }
     state.phase = 'complete';
-    state.current = null;
     saveResult();
     updateDisplay();
     renderSettings();
@@ -1021,16 +1179,10 @@ h1 {
     const settings = { ...state.settings };
     const key = core.specKey(settings);
     const previousBest = stats.best[key];
-    if (previousBest === undefined || state.elapsed < previousBest) {
-      stats.best[key] = state.elapsed;
-    }
+    if (previousBest === undefined || state.elapsed < previousBest) stats.best[key] = state.elapsed;
     stats.records.unshift({
       key,
       settings,
-      size: settings.size,
-      order: settings.order,
-      arrangement: settings.arrangement,
-      shape: settings.shape,
       ms: state.elapsed,
       errors: state.errors,
       completedAt: Date.now(),
@@ -1039,20 +1191,15 @@ h1 {
     persistStats();
   }
 
-  function orderLabel(order) {
-    return order === 'asc' ? '正序' : '倒序';
-  }
-
-  function arrangementLabel(arrangement) {
-    return arrangement === 'random' ? '随机' : '顺序';
-  }
-
   function shapeLabel(shape) {
-    return shape === 'circle' ? '圆形' : '方形';
+    if (shape === 'circle') return '圆形';
+    if (shape === 'irregular') return '不规则';
+    return '方形';
   }
 
   function specLabel(settings) {
-    return `${settings.size}×${settings.size} ${shapeLabel(settings.shape)} · ${orderLabel(settings.order)} · ${arrangementLabel(settings.arrangement)}`;
+    if (settings.shape === 'square') return `${settings.squareSize}×${settings.squareSize} 方形`;
+    return `${settings.count} 个数字 · ${shapeLabel(settings.shape)}`;
   }
 
   function renderStats() {
@@ -1089,16 +1236,15 @@ h1 {
 
   function setSetting(key, value) {
     if (state.phase === 'running') return;
-    if (state.phase === 'complete') {
-      state.phase = 'idle';
-      elements.resultPanel.hidden = true;
+    if (key === 'shape') {
+      state.settings.shape = value;
+      if (value === 'square' && !SQUARE_SIZES.includes(state.settings.squareSize)) state.settings.squareSize = 5;
+      if (value !== 'square' && !COUNT_SIZES.includes(state.settings.count)) state.settings.count = 25;
+    } else if (key === 'size') {
+      if (state.settings.shape === 'square') state.settings.squareSize = Number(value);
+      else state.settings.count = Number(value);
     }
-    state.settings[key] = key === 'size' ? Number(value) : value;
-    state.phase = 'idle';
-    state.elapsed = 0;
-    state.completed = 0;
-    state.errors = 0;
-    state.current = firstTarget();
+    setPreviewState();
     renderSettings();
     renderBoard();
     updateDisplay();
@@ -1108,29 +1254,26 @@ h1 {
   function applyPreset(preset) {
     if (state.phase === 'running') return;
     const presets = {
-      beginner: { size: 3, order: 'asc', arrangement: 'random', shape: 'square' },
-      standard: { size: 5, order: 'asc', arrangement: 'random', shape: 'square' },
-      advanced: { size: 6, order: 'asc', arrangement: 'random', shape: 'circle' },
+      beginner: { shape: 'square', squareSize: 3, count: 25 },
+      standard: { shape: 'square', squareSize: 5, count: 25 },
+      chaos: { shape: 'irregular', squareSize: 5, count: 50 },
     };
     state.settings = { ...presets[preset] };
-    state.phase = 'idle';
-    state.elapsed = 0;
-    state.completed = 0;
-    state.errors = 0;
-    state.current = firstTarget();
-    elements.resultPanel.hidden = true;
+    setPreviewState();
     renderSettings();
     renderBoard();
     updateDisplay();
     renderStats();
   }
 
-  document.querySelectorAll('[data-setting]').forEach((button) => {
-    button.addEventListener('click', () => setSetting(button.dataset.setting, button.dataset.value));
-  });
-
-  document.querySelectorAll('[data-preset]').forEach((button) => {
-    button.addEventListener('click', () => applyPreset(button.dataset.preset));
+  elements.settings.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-setting], [data-preset]');
+    if (!button) return;
+    if (button.dataset.preset) {
+      applyPreset(button.dataset.preset);
+      return;
+    }
+    setSetting(button.dataset.setting, button.dataset.value);
   });
 
   elements.startBtn.addEventListener('click', startGame);
@@ -1143,10 +1286,9 @@ h1 {
     elements.statusMessage.textContent = '训练记录已清除。';
   });
 
-  state.values = createValues();
-  state.current = firstTarget();
+  state.total = currentTotal();
   renderSettings();
-  renderBoard(state.values);
+  renderBoard();
   updateDisplay();
   renderStats();
 })();

@@ -165,11 +165,11 @@ h1 {
 }
 
 .choice-row {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
 }
 
-.choice-row--four {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.choice-row--size {
+  grid-template-columns: repeat(auto-fit, minmax(46px, 1fr));
 }
 
 .choice,
@@ -347,18 +347,21 @@ h1 {
   aspect-ratio: 1;
 }
 
-.board[data-shape="circle"] {
+.board[data-shape="circle"],
+.board[data-shape="irregular"] {
   position: relative;
 }
 
-.board[data-shape="circle"] .cell {
+.board[data-shape="circle"] .cell,
+.board[data-shape="irregular"] .cell {
   position: absolute;
   left: calc(var(--x) * 100%);
   top: calc(var(--y) * 100%);
-  width: clamp(24px, calc(100% / (var(--size) + 8)), 54px);
+  width: min(64px, calc(100% / var(--cell-divisor)));
   aspect-ratio: 1;
+  border-radius: var(--radius, 50%);
   font-size: clamp(0.72rem, 1.8vw, 1rem);
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) scale(var(--scale, 1));
 }
 
 .cell {
@@ -379,14 +382,15 @@ h1 {
   transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
 
-.cell:hover:not(:disabled):not(.done) {
+.cell:hover:not(:disabled):not(.correct) {
   border-color: #b5aa9a;
   box-shadow: 0 9px 18px rgba(32, 37, 34, 0.09);
   transform: translateY(-2px);
 }
 
-.board[data-shape="circle"] .cell:hover:not(:disabled):not(.done) {
-  transform: translate(-50%, -50%) translateY(-2px);
+.board[data-shape="circle"] .cell:hover:not(:disabled):not(.correct),
+.board[data-shape="irregular"] .cell:hover:not(:disabled):not(.correct) {
+  transform: translate(-50%, -50%) scale(var(--scale, 1)) translateY(-2px);
 }
 
 .cell:disabled {
@@ -394,10 +398,11 @@ h1 {
   opacity: 1;
 }
 
-.cell.done {
+.cell.correct {
   color: var(--success-ink);
-  background: var(--success);
-  border-color: #bfd8c2;
+  background: #e2f1e4;
+  border-color: #9ecaa5;
+  animation: correctPulse 380ms ease-out both;
 }
 
 .cell.wrong {
@@ -412,6 +417,12 @@ h1 {
   100% { translate: 0 0; }
   30% { translate: -4px 0; }
   60% { translate: 4px 0; }
+}
+
+@keyframes correctPulse {
+  0% { box-shadow: 0 0 0 0 rgba(100, 173, 112, 0); }
+  42% { box-shadow: 0 0 0 8px rgba(100, 173, 112, 0.22); }
+  100% { box-shadow: 0 0 0 0 rgba(100, 173, 112, 0); }
 }
 
 .controls {

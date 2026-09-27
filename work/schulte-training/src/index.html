@@ -15,7 +15,7 @@
       <header class="hero">
         <p class="eyebrow">专注力训练</p>
         <h1>舒尔特方格</h1>
-        <p class="hero-copy">选择训练规格，按顺序找到全部数字。保持视线稳定，不必加快呼吸。</p>
+        <p class="hero-copy">选择棋盘形状和数字数量，按 1 到终点的顺序完成训练。保持视线稳定，不必加快呼吸。</p>
       </header>
 
       <main class="layout">
@@ -33,44 +33,18 @@
               <span>棋盘尺寸</span>
               <small>数字总量自动调整</small>
             </div>
-            <div class="choice-row choice-row--four" role="group" aria-label="棋盘尺寸">
-              <button class="choice" type="button" data-setting="size" data-value="3" aria-pressed="false">3×3</button>
-              <button class="choice" type="button" data-setting="size" data-value="4" aria-pressed="false">4×4</button>
-              <button class="choice" type="button" data-setting="size" data-value="5" aria-pressed="true">5×5</button>
-              <button class="choice" type="button" data-setting="size" data-value="6" aria-pressed="false">6×6</button>
-            </div>
-          </div>
-
-          <div class="field">
-            <div class="field-label">
-              <span>点击顺序</span>
-              <small>从起点向终点推进</small>
-            </div>
-            <div class="choice-row" role="group" aria-label="点击顺序">
-              <button class="choice" type="button" data-setting="order" data-value="asc" aria-pressed="true">正序 1→N²</button>
-              <button class="choice" type="button" data-setting="order" data-value="desc" aria-pressed="false">倒序 N²→1</button>
-            </div>
-          </div>
-
-          <div class="field">
-            <div class="field-label">
-              <span>排列方式</span>
-              <small>标准训练建议随机</small>
-            </div>
-            <div class="choice-row" role="group" aria-label="排列方式">
-              <button class="choice" type="button" data-setting="arrangement" data-value="random" aria-pressed="true">随机排列</button>
-              <button class="choice" type="button" data-setting="arrangement" data-value="sequential" aria-pressed="false">顺序排列</button>
-            </div>
+            <div class="choice-row choice-row--size" id="sizeChoices" role="group" aria-label="棋盘尺寸"></div>
           </div>
 
           <div class="field">
             <div class="field-label">
               <span>棋盘形状</span>
-              <small>圆形为同心环排布</small>
+              <small>圆形也随机散布</small>
             </div>
             <div class="choice-row" role="group" aria-label="棋盘形状">
               <button class="choice" type="button" data-setting="shape" data-value="square" aria-pressed="true">方形</button>
               <button class="choice" type="button" data-setting="shape" data-value="circle" aria-pressed="false">圆形</button>
+              <button class="choice" type="button" data-setting="shape" data-value="irregular" aria-pressed="false">不规则</button>
             </div>
           </div>
 
@@ -82,7 +56,7 @@
             <div class="preset-row">
               <button class="preset" type="button" data-preset="beginner">初级 3×3</button>
               <button class="preset" type="button" data-preset="standard">标准 5×5</button>
-              <button class="preset" type="button" data-preset="advanced">进阶 6×6</button>
+              <button class="preset" type="button" data-preset="chaos">混乱 50</button>
             </div>
           </div>
 
