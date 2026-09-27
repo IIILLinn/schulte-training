@@ -347,8 +347,7 @@ h1 {
   aspect-ratio: 1;
 }
 
-.board[data-shape="circle"],
-.board[data-shape="irregular"] {
+.board[data-shape="circle"] {
   position: relative;
   isolation: isolate;
 }
@@ -370,15 +369,7 @@ h1 {
   stroke-dasharray: 3 3;
 }
 
-.board[data-shape="irregular"] .shape-outline polygon {
-  fill: rgba(255, 255, 255, 0.30);
-  stroke: #b7aa98;
-  stroke-width: 1.15;
-  stroke-linejoin: round;
-}
-
-.board[data-shape="circle"] .cell,
-.board[data-shape="irregular"] .cell {
+.board[data-shape="circle"] .cell {
   position: absolute;
   left: calc(var(--x) * 100%);
   top: calc(var(--y) * 100%);
@@ -414,8 +405,7 @@ h1 {
   transform: translateY(-2px);
 }
 
-.board[data-shape="circle"] .cell:hover:not(:disabled):not(.correct),
-.board[data-shape="irregular"] .cell:hover:not(:disabled):not(.correct) {
+.board[data-shape="circle"] .cell:hover:not(:disabled):not(.correct) {
   transform: translate(-50%, -50%) scale(var(--scale, 1)) translateY(-2px);
 }
 

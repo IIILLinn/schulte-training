@@ -25,6 +25,18 @@ function pairwiseMinDistance(slots) {
   return minimum;
 }
 
+function consecutiveMinDistance(values, slots) {
+  const slotByValue = new Map();
+  slots.forEach((slot, index) => slotByValue.set(values[index], slot));
+  let minimum = Infinity;
+  for (let value = 1; value < values.length; value += 1) {
+    const a = slotByValue.get(value);
+    const b = slotByValue.get(value + 1);
+    minimum = Math.min(minimum, Math.hypot(a.x - b.x, a.y - b.y));
+  }
+  return minimum;
+}
+
 test('buildValues returns the full shuffled range for arbitrary counts', () => {
   for (const count of COUNTS) {
     const values = core.buildValues(count, seeded(count));
@@ -42,47 +54,12 @@ test('createCircularLayout supports every configured count without overlaps', ()
   }
 });
 
-test('circle and irregular layouts expose visibly different outlines', () => {
+test('circle layout exposes a stable circular outline', () => {
   const circle = core.createCircularLayout(50, seeded(1));
-  const irregular = core.createIrregularLayout(50, seeded(2));
   assert.ok(circle.outline.length >= 32);
-  assert.ok(irregular.outline.length >= 32);
-  const radii = (outline) => outline.map((point) => Math.hypot(point.x - 0.5, point.y - 0.5));
-  const circleRadii = radii(circle.outline);
-  const irregularRadii = radii(irregular.outline);
-  assert.ok(Math.max(...circleRadii) - Math.min(...circleRadii) < 0.02, 'circle outline must stay circular');
-  assert.ok(Math.max(...irregularRadii) - Math.min(...irregularRadii) > 0.04, 'irregular outline must be visibly uneven');
+  const radii = circle.outline.map((point) => Math.hypot(point.x - 0.5, point.y - 0.5));
+  assert.ok(Math.max(...radii) - Math.min(...radii) < 0.02);
 });
-
-test('createIrregularLayout creates chaotic layouts that change by seed', () => {
-  const first = core.createIrregularLayout(50, seeded(1));
-  const second = core.createIrregularLayout(50, seeded(2));
-  assert.equal(first.slots.length, 50);
-  assert.equal(second.slots.length, 50);
-  assert.notDeepEqual(first.slots.map(({ x, y }) => [x, y]), second.slots.map(({ x, y }) => [x, y]));
-  assert.ok(first.slots.every(({ x, y }) => x >= 0.03 && x <= 0.97 && y >= 0.03 && y <= 0.97));
-  assert.ok(pairwiseMinDistance(first.slots) >= first.cellRatio, 'irregular 50 overlaps');
-  assert.ok(first.cellRatio > 0 && first.cellRatio < 0.2);
-});
-
-test('specKey follows the simplified shape-size model', () => {
-  assert.equal(core.specKey({ shape: 'square', squareSize: 7 }), 'square-7x7');
-  assert.equal(core.specKey({ shape: 'circle', count: 30 }), 'circle-30');
-  assert.equal(core.specKey({ shape: 'irregular', count: 50 }), 'irregular-50');
-});
-
-
-function consecutiveMinDistance(values, slots) {
-  const slotByValue = new Map();
-  slots.forEach((slot, index) => slotByValue.set(values[index], slot));
-  let minimum = Infinity;
-  for (let value = 1; value < values.length; value += 1) {
-    const a = slotByValue.get(value);
-    const b = slotByValue.get(value + 1);
-    minimum = Math.min(minimum, Math.hypot(a.x - b.x, a.y - b.y));
-  }
-  return minimum;
-}
 
 test('createCircularLayout changes between random seeds', () => {
   const first = core.createCircularLayout(50, seeded(1));
@@ -93,14 +70,19 @@ test('createCircularLayout changes between random seeds', () => {
 test('assignValuesToSlots spreads consecutive numbers apart', () => {
   for (const count of COUNTS) {
     const circular = core.createCircularLayout(count, seeded(count));
-    const circularValues = core.assignValuesToSlots(circular.slots, seeded(count + 100));
-    assert.deepEqual([...circularValues].sort((a, b) => a - b), Array.from({ length: count }, (_, index) => index + 1));
-    assert.ok(consecutiveMinDistance(circularValues, circular.slots) >= circular.cellRatio * 1.35, `circle ${count} keeps consecutive numbers too close`);
-
-    const irregular = core.createIrregularLayout(count, seeded(count + 200));
-    const irregularValues = core.assignValuesToSlots(irregular.slots, seeded(count + 300));
-    assert.ok(consecutiveMinDistance(irregularValues, irregular.slots) >= irregular.cellRatio * 1.35, `irregular ${count} keeps consecutive numbers too close`);
+    const values = core.assignValuesToSlots(circular.slots, seeded(count + 100));
+    assert.deepEqual([...values].sort((a, b) => a - b), Array.from({ length: count }, (_, index) => index + 1));
+    assert.ok(consecutiveMinDistance(values, circular.slots) >= circular.cellRatio * 1.35, `circle ${count} keeps consecutive numbers too close`);
   }
+});
+
+test('irregular layout API is removed', () => {
+  assert.equal(core.createIrregularLayout, undefined);
+});
+
+test('specKey follows the simplified shape-size model', () => {
+  assert.equal(core.specKey({ shape: 'square', squareSize: 7 }), 'square-7x7');
+  assert.equal(core.specKey({ shape: 'circle', count: 30 }), 'circle-30');
 });
 
 test('formatTime is stable', () => {

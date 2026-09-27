@@ -118,8 +118,7 @@
 
   function createLayout(random) {
     if (state.settings.shape === 'square') return core.createSquareLayout(state.settings.squareSize);
-    if (state.settings.shape === 'circle') return core.createCircularLayout(state.settings.count, random);
-    return core.createIrregularLayout(state.settings.count, random);
+    return core.createCircularLayout(state.settings.count, random);
   }
 
   function renderBoard(random = Math.random) {
@@ -167,13 +166,8 @@
         const slot = layout.slots[index];
         cell.style.setProperty('--x', slot.x);
         cell.style.setProperty('--y', slot.y);
-        if (state.settings.shape === 'circle') {
-          cell.style.setProperty('--scale', '1');
-          cell.style.setProperty('--radius', '50%');
-        } else {
-          cell.style.setProperty('--scale', (0.82 + random() * 0.16).toFixed(3));
-          cell.style.setProperty('--radius', `${(26 + random() * 22).toFixed(1)}%`);
-        }
+        cell.style.setProperty('--scale', '1');
+        cell.style.setProperty('--radius', '50%');
       }
 
       cell.addEventListener('click', () => handleCellClick(cell, value));
@@ -295,9 +289,7 @@
   }
 
   function shapeLabel(shape) {
-    if (shape === 'circle') return '圆形';
-    if (shape === 'irregular') return '不规则';
-    return '方形';
+    return shape === 'circle' ? '圆形' : '方形';
   }
 
   function specLabel(settings) {
@@ -359,7 +351,6 @@
     const presets = {
       beginner: { shape: 'square', squareSize: 3, count: 25 },
       standard: { shape: 'square', squareSize: 5, count: 25 },
-      chaos: { shape: 'irregular', squareSize: 5, count: 50 },
     };
     state.settings = { ...presets[preset] };
     setPreviewState();

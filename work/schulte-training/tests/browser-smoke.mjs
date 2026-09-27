@@ -86,6 +86,7 @@ try {
   assert.equal(await evaluate('document.querySelector(\'[data-setting="order"]\') === null'), true);
   assert.equal(await evaluate('document.querySelector(\'[data-setting="arrangement"]\') === null'), true);
   assert.equal(await evaluate('document.querySelector(\'[data-setting="size"][data-value="7"]\').textContent'), '7×7');
+  assert.equal(await evaluate('document.querySelector(\'[data-setting="shape"][data-value="irregular"]\') === null'), true);
 
   await select('size', 7);
   await evaluate('document.querySelector("#startBtn").click()');
@@ -127,22 +128,21 @@ try {
   await cli(['reload']);
   assert.match(await evaluate('document.querySelector("#historyList").textContent'), /15 个数字/);
 
-  await select('shape', 'irregular');
+  await select('shape', 'circle');
   await select('size', 50);
   await evaluate('document.querySelector("#startBtn").click()');
   assert.equal(Number(await evaluate('document.querySelectorAll(".cell").length')), 50);
-  assert.equal(await evaluate('document.querySelector("#board").dataset.shape'), 'irregular');
-  assert.equal(await evaluate('document.querySelector(".shape-outline polygon") !== null'), true);
-  assert.ok(Number(await evaluate('document.querySelector(".shape-outline polygon").getAttribute("points").split(" ").filter(Boolean).length')) >= 32);
-  const irregularLayoutFirst = await evaluate(layoutExpression);
+  assert.equal(await evaluate('document.querySelector("#board").dataset.shape'), 'circle');
+  assert.equal(await evaluate('document.querySelector(".shape-outline circle") !== null'), true);
+  const circle50LayoutFirst = await evaluate(layoutExpression);
   await evaluate('document.querySelector("#restartBtn").click()');
-  const irregularLayoutSecond = await evaluate(layoutExpression);
-  assert.notEqual(irregularLayoutFirst, irregularLayoutSecond);
+  const circle50LayoutSecond = await evaluate(layoutExpression);
+  assert.notEqual(circle50LayoutFirst, circle50LayoutSecond);
   assert.equal(Number(await evaluate(overlapExpression)), 0);
 
-  const irregularCellWidth = Number(await evaluate('Math.min(...[...document.querySelectorAll(".cell")].map((cell) => cell.getBoundingClientRect().width))'));
-  const irregularConsecutive = Number(await evaluate(consecutiveExpression));
-  assert.ok(irregularConsecutive >= irregularCellWidth * 1.2, `irregular consecutive distance ${irregularConsecutive} < ${irregularCellWidth * 1.2}`);
+  const circle50CellWidth = Number(await evaluate('Math.min(...[...document.querySelectorAll(".cell")].map((cell) => cell.getBoundingClientRect().width))'));
+  const circle50Consecutive = Number(await evaluate(consecutiveExpression));
+  assert.ok(circle50Consecutive >= circle50CellWidth * 1.2, `circle 50 consecutive distance ${circle50Consecutive} < ${circle50CellWidth * 1.2}`);
 
   await cli(['resize', '390', '844']);
   assert.equal(Number(await evaluate(overlapExpression)), 0);

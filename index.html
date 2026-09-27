@@ -356,8 +356,7 @@ h1 {
   aspect-ratio: 1;
 }
 
-.board[data-shape="circle"],
-.board[data-shape="irregular"] {
+.board[data-shape="circle"] {
   position: relative;
   isolation: isolate;
 }
@@ -379,15 +378,7 @@ h1 {
   stroke-dasharray: 3 3;
 }
 
-.board[data-shape="irregular"] .shape-outline polygon {
-  fill: rgba(255, 255, 255, 0.30);
-  stroke: #b7aa98;
-  stroke-width: 1.15;
-  stroke-linejoin: round;
-}
-
-.board[data-shape="circle"] .cell,
-.board[data-shape="irregular"] .cell {
+.board[data-shape="circle"] .cell {
   position: absolute;
   left: calc(var(--x) * 100%);
   top: calc(var(--y) * 100%);
@@ -423,8 +414,7 @@ h1 {
   transform: translateY(-2px);
 }
 
-.board[data-shape="circle"] .cell:hover:not(:disabled):not(.correct),
-.board[data-shape="irregular"] .cell:hover:not(:disabled):not(.correct) {
+.board[data-shape="circle"] .cell:hover:not(:disabled):not(.correct) {
   transform: translate(-50%, -50%) scale(var(--scale, 1)) translateY(-2px);
 }
 
@@ -635,7 +625,6 @@ h1 {
             <div class="choice-row" role="group" aria-label="棋盘形状">
               <button class="choice" type="button" data-setting="shape" data-value="square" aria-pressed="true">方形</button>
               <button class="choice" type="button" data-setting="shape" data-value="circle" aria-pressed="false">圆形</button>
-              <button class="choice" type="button" data-setting="shape" data-value="irregular" aria-pressed="false">不规则</button>
             </div>
           </div>
 
@@ -647,7 +636,6 @@ h1 {
             <div class="preset-row">
               <button class="preset" type="button" data-preset="beginner">初级 3×3</button>
               <button class="preset" type="button" data-preset="standard">标准 5×5</button>
-              <button class="preset" type="button" data-preset="chaos">混乱 50</button>
             </div>
           </div>
 
@@ -822,69 +810,6 @@ h1 {
     };
   }
 
-  function createIrregularLayout(count, random = Math.random) {
-    const harmonics = [
-      { frequency: 2, amplitude: 0.052 + random() * 0.022, phase: random() * Math.PI * 2 },
-      { frequency: 3, amplitude: 0.042 + random() * 0.018, phase: random() * Math.PI * 2 },
-      { frequency: 5, amplitude: 0.030 + random() * 0.014, phase: random() * Math.PI * 2 },
-      { frequency: 7, amplitude: 0.020 + random() * 0.010, phase: random() * Math.PI * 2 },
-    ];
-
-    function boundaryRadius(angle) {
-      let radius = 0.34;
-      for (const harmonic of harmonics) {
-        radius += harmonic.amplitude * Math.sin(harmonic.frequency * angle + harmonic.phase);
-      }
-      return clamp(radius, 0.20, 0.47);
-    }
-
-    const outline = Array.from({ length: 72 }, (_, index) => {
-      const angle = (index / 72) * Math.PI * 2;
-      const radius = clamp(boundaryRadius(angle) + 0.025, 0.22, 0.48);
-      return {
-        x: clamp(0.5 + Math.cos(angle) * radius, 0.03, 0.97),
-        y: clamp(0.5 + Math.sin(angle) * radius, 0.03, 0.97),
-      };
-    });
-
-    let gridSize = Math.max(7, Math.ceil(Math.sqrt(count / 0.34)));
-    let candidates = [];
-    let spacing = 1 / gridSize;
-
-    while (gridSize <= 22) {
-      candidates = [];
-      spacing = 1 / gridSize;
-      for (let row = 0; row < gridSize; row += 1) {
-        for (let column = 0; column < gridSize; column += 1) {
-          const x = (column + 0.5) * spacing;
-          const y = (row + 0.5) * spacing;
-          const dx = x - 0.5;
-          const dy = y - 0.5;
-          const angle = Math.atan2(dy, dx);
-          const radius = Math.hypot(dx, dy);
-          if (radius <= boundaryRadius(angle) - spacing * 0.25) {
-            candidates.push({ x, y, radius });
-          }
-        }
-      }
-      if (candidates.length >= count + Math.max(4, Math.round(count * 0.12))) break;
-      gridSize += 1;
-    }
-
-    const selected = shuffle(candidates, random).slice(0, count);
-    const jitter = spacing * 0.06;
-    const slots = selected.map((candidate) => ({
-      x: clamp(candidate.x + (random() - 0.5) * jitter * 2, 0.03, 0.97),
-      y: clamp(candidate.y + (random() - 0.5) * jitter * 2, 0.03, 0.97),
-    }));
-
-    return {
-      slots: shuffle(slots, random),
-      cellRatio: Math.min(0.12, spacing * 0.62),
-      outline,
-    };
-  }
-
   function objective(values, slots) {
     let minimum = Infinity;
     let total = 0;
@@ -977,7 +902,6 @@ h1 {
     assignValuesToSlots,
     buildValues,
     createCircularLayout,
-    createIrregularLayout,
     createSquareLayout,
     formatTime,
     shuffle,
@@ -1107,8 +1031,7 @@ h1 {
 
   function createLayout(random) {
     if (state.settings.shape === 'square') return core.createSquareLayout(state.settings.squareSize);
-    if (state.settings.shape === 'circle') return core.createCircularLayout(state.settings.count, random);
-    return core.createIrregularLayout(state.settings.count, random);
+    return core.createCircularLayout(state.settings.count, random);
   }
 
   function renderBoard(random = Math.random) {
@@ -1156,13 +1079,8 @@ h1 {
         const slot = layout.slots[index];
         cell.style.setProperty('--x', slot.x);
         cell.style.setProperty('--y', slot.y);
-        if (state.settings.shape === 'circle') {
-          cell.style.setProperty('--scale', '1');
-          cell.style.setProperty('--radius', '50%');
-        } else {
-          cell.style.setProperty('--scale', (0.82 + random() * 0.16).toFixed(3));
-          cell.style.setProperty('--radius', `${(26 + random() * 22).toFixed(1)}%`);
-        }
+        cell.style.setProperty('--scale', '1');
+        cell.style.setProperty('--radius', '50%');
       }
 
       cell.addEventListener('click', () => handleCellClick(cell, value));
@@ -1284,9 +1202,7 @@ h1 {
   }
 
   function shapeLabel(shape) {
-    if (shape === 'circle') return '圆形';
-    if (shape === 'irregular') return '不规则';
-    return '方形';
+    return shape === 'circle' ? '圆形' : '方形';
   }
 
   function specLabel(settings) {
@@ -1348,7 +1264,6 @@ h1 {
     const presets = {
       beginner: { shape: 'square', squareSize: 3, count: 25 },
       standard: { shape: 'square', squareSize: 5, count: 25 },
-      chaos: { shape: 'irregular', squareSize: 5, count: 50 },
     };
     state.settings = { ...presets[preset] };
     setPreviewState();

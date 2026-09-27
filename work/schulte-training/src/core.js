@@ -95,69 +95,6 @@
     };
   }
 
-  function createIrregularLayout(count, random = Math.random) {
-    const harmonics = [
-      { frequency: 2, amplitude: 0.052 + random() * 0.022, phase: random() * Math.PI * 2 },
-      { frequency: 3, amplitude: 0.042 + random() * 0.018, phase: random() * Math.PI * 2 },
-      { frequency: 5, amplitude: 0.030 + random() * 0.014, phase: random() * Math.PI * 2 },
-      { frequency: 7, amplitude: 0.020 + random() * 0.010, phase: random() * Math.PI * 2 },
-    ];
-
-    function boundaryRadius(angle) {
-      let radius = 0.34;
-      for (const harmonic of harmonics) {
-        radius += harmonic.amplitude * Math.sin(harmonic.frequency * angle + harmonic.phase);
-      }
-      return clamp(radius, 0.20, 0.47);
-    }
-
-    const outline = Array.from({ length: 72 }, (_, index) => {
-      const angle = (index / 72) * Math.PI * 2;
-      const radius = clamp(boundaryRadius(angle) + 0.025, 0.22, 0.48);
-      return {
-        x: clamp(0.5 + Math.cos(angle) * radius, 0.03, 0.97),
-        y: clamp(0.5 + Math.sin(angle) * radius, 0.03, 0.97),
-      };
-    });
-
-    let gridSize = Math.max(7, Math.ceil(Math.sqrt(count / 0.34)));
-    let candidates = [];
-    let spacing = 1 / gridSize;
-
-    while (gridSize <= 22) {
-      candidates = [];
-      spacing = 1 / gridSize;
-      for (let row = 0; row < gridSize; row += 1) {
-        for (let column = 0; column < gridSize; column += 1) {
-          const x = (column + 0.5) * spacing;
-          const y = (row + 0.5) * spacing;
-          const dx = x - 0.5;
-          const dy = y - 0.5;
-          const angle = Math.atan2(dy, dx);
-          const radius = Math.hypot(dx, dy);
-          if (radius <= boundaryRadius(angle) - spacing * 0.25) {
-            candidates.push({ x, y, radius });
-          }
-        }
-      }
-      if (candidates.length >= count + Math.max(4, Math.round(count * 0.12))) break;
-      gridSize += 1;
-    }
-
-    const selected = shuffle(candidates, random).slice(0, count);
-    const jitter = spacing * 0.06;
-    const slots = selected.map((candidate) => ({
-      x: clamp(candidate.x + (random() - 0.5) * jitter * 2, 0.03, 0.97),
-      y: clamp(candidate.y + (random() - 0.5) * jitter * 2, 0.03, 0.97),
-    }));
-
-    return {
-      slots: shuffle(slots, random),
-      cellRatio: Math.min(0.12, spacing * 0.62),
-      outline,
-    };
-  }
-
   function objective(values, slots) {
     let minimum = Infinity;
     let total = 0;
@@ -250,7 +187,6 @@
     assignValuesToSlots,
     buildValues,
     createCircularLayout,
-    createIrregularLayout,
     createSquareLayout,
     formatTime,
     shuffle,
